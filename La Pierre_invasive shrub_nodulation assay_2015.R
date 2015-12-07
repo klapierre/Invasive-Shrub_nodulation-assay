@@ -65,7 +65,24 @@ nodCore <- nodRaw%>%
   mutate(nod_proportion=nod_count/nod_N)
 
 
+###mixed effects model for height with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
 
+#visualize the data
+boxplot(height_cm ~ plant_status*host_match, nodRaw)
+
+#mixed effects model
+nodRegHeight <- lme(height_cm ~ plant_status*host_match, random=~1|plant, data=nodRaw)
+summary(nodRegHeight)
+anova(nodRegHeight)
+lsmeans(nodRegHeight, cld~plant_status*host_match)
+
+# #testing assumptions - mostly normal data
+# plot(ranef(nodRegHeight))
+# resNodRegHeight<-residuals(nodRegHeight)
+# plot(resNodRegHeight)
+# qqnorm(resNodRegHeight)
+# qqline(resNodRegHeight)
+# plot(nodRegHeight)
 
 
 
