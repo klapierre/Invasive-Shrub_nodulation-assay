@@ -237,15 +237,9 @@ nodNone <- nodRaw%>%
 
 #make a column with control vs not control and then make a bar in figure of controls, not nodulated but inoculated, and nodulated
 nodSize <- nodRaw%>%
-  mutate(noded=ifelse(nod_total==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(noded, ino_status, sep='::'))%>%
-  group_by(plant, original_host, noded, ino_type)%>%
+  mutate(total_nod=ifelse(nod_total==0, 0, 1), func_nod=ifelse(nod_func==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(total_nod, func_nod, ino_status, sep='::'))%>%
+  group_by(plant, original_host, func_nod, total_nod, ino_type)%>%
   summarise(bio=mean(total_biomass))
-
-ggplot(data=barGraphStats(data=nodSize%>%filter(plant=='ACWR'), variable="bio", byFactorNames=c("original_host", "noded")), aes(x=original_host, y=mean, fill=as.factor(noded))) +
-  geom_bar(stat='identity', position=position_dodge()) +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2)
-
-
 
 ggplot(data=barGraphStats(data=nodSize, variable="bio", byFactorNames=c("plant", "ino_type")), aes(x=plant, y=mean, fill=as.factor(ino_type))) +
   geom_bar(stat='identity', position=position_dodge()) +
@@ -253,7 +247,9 @@ ggplot(data=barGraphStats(data=nodSize, variable="bio", byFactorNames=c("plant",
   xlab('Plant Species') + ylab('Total Biomass (g)')
 
 
-
+ggplot(data=barGraphStats(data=nodSize%>%filter(plant=='ACWR'), variable="bio", byFactorNames=c("original_host", "noded")), aes(x=original_host, y=mean, fill=as.factor(noded))) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2)
 
 #from rhizobial side of things
 #total nodules formed
