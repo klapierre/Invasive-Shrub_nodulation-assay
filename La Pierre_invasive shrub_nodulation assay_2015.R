@@ -52,17 +52,27 @@ nodRaw <- read.csv('La Pierre_invasive shrub_noduation assay_2015.csv')%>%
   #add total biomass and root:shoot ratio variables
   mutate(total_biomass=shoots_g+roots_g, rootshoot=roots_g/shoots_g)%>%
   #remove plants that did not get inoculated or that died before harvest and control plants
-  filter(harvest_date!='NA', host_match!='control')%>%
+  filter(harvest_date!='NA')%>%
   #remove CYSC plants for not, because not inoculated with own rhizobia, and LUBI because so many died
   filter(plant!='CYSC', plant!='LUBI')
 
 #get proportion of plants that nodulated for each category
-nodCore <- nodRaw%>%
-  mutate(nodulated=ifelse(nod_total>0, 1, 0))%>%
-  select(pot, plant, plant_status, strain_label, host_match, nodulated, nod_total)%>%
-  group_by(plant, plant_status, host_match)%>%
-  summarise(nod_N=length(nod_total), nod_count=sum(nodulated))%>%
-  mutate(nod_proportion=nod_count/nod_N)
+nodProp <- nodRaw%>%
+  mutate(nodulated_total=ifelse(nod_total>0, 1, 0), nodulated_func=ifelse(nod_func>0, 1, 0))%>%
+  select(pot, plant, plant_status, strain_label, original_host, host_match, nodulated_total, nodulated_func, nod_total, nod_func)%>%
+  group_by(plant, plant_status, host_match, original_host)%>%
+  summarise(nod_N=length(nod_total), nod_total_count=sum(nodulated_total), nod_func_count=sum(nodulated_func))%>%
+  mutate(nod_proportion_total=nod_total_count/nod_N, nod_proportion_func=nod_func_count/nod_N)
+
+#get proportion of plants each strain can affiliate with
+rhizProp <- nodRaw%>%
+  mutate(total_nod_formed=ifelse(nod_total>0, 1, 0))%>%
+  mutate(func_nod_formed=ifelse(nod_func>0, 1, 0))%>%
+  select(pot, plant, plant_status, strain_label, original_host, host_match, total_nod_formed, func_nod_formed, nod_total, nod_func)%>%
+  group_by(strain_label, original_host)%>%
+  summarise(rhiz_count_total=sum(total_nod_formed), rhiz_count_func=sum(func_nod_formed))%>%
+  mutate(rhiz_proportion_total=rhiz_count_total/6, rhiz_proportion_func=rhiz_count_func/6)%>%
+  mutate(host_status=ifelse(original_host=='GEMO', 'invasive', ifelse(original_host=='MEPO', 'invasive', ifelse(original_host=='SPJU', 'invasive', ifelse(original_host=='ULEU', 'invasive', ifelse(original_host=='Vicia', 'invasive', ifelse(original_host=='ACGL', 'native', ifelse(original_host=='ACHE', 'native', ifelse(original_host=='ACST', 'native', ifelse(original_host=='ACWR', 'native', ifelse(original_host=='LUAR', 'native', ifelse(original_host=='LUBI', 'native', ifelse(original_host=='LUNA', 'native', 'control')))))))))))))
 
 
 ###mixed effects model for height with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
@@ -90,9 +100,198 @@ ggplot(data=barGraphStats(data=nodRaw, variable="height_cm", byFactorNames=c("pl
 
 
 
+###mixed effects model for nodule number with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
+
+#mixed effects model
+nodRegTot <- lme(nod_total ~ plant_status*host_match, random=~1|plant, data=nodRaw)
+summary(nodRegTot)
+anova(nodRegTot)
+lsmeans(nodRegTot, cld~plant_status*host_match)
+
+# #testing assumptions - not quite normal data
+# plot(ranef(nodRegTot))
+# resNodRegTot<-residuals(nodRegTot)
+# plot(resNodRegTot)
+# qqnorm(resNodRegTot)
+# qqline(resNodRegTot)
+# plot(nodRegTot)
+
+ggplot(data=barGraphStats(data=nodRaw, variable="nod_total", byFactorNames=c("plant_status", "host_match")), aes(x=plant_status, y=mean, fill=host_match)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Nodule Number') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+ggplot(data=barGraphStats(data=nodRaw, variable="nod_func", byFactorNames=c("plant_status", "host_match")), aes(x=plant_status, y=mean, fill=host_match)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Functional Nodule Number') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+ggplot(data=barGraphStats(data=nodRaw, variable="total_biomass", byFactorNames=c("plant_status", "host_match")), aes(x=plant_status, y=mean, fill=host_match)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Total Biomass (g)') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+ggplot(data=barGraphStats(data=nodRaw%>%filter(host_match!='control'), variable="total_biomass", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Total Biomass (g)') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+#for only those strains that were compatible
+ggplot(data=barGraphStats(data=subset(nodRaw, subset=(nod_total>0)), variable="total_biomass", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Total Biomass (g)')
+
+
+ggplot(data=barGraphStats(data=nodProp%>%filter(host_match!='control'), variable="nod_proportion", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Proportion of Strains Nodulating') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+ggplot(data=barGraphStats(data=nodProp%>%filter(host_match!='control'), variable="nod_proportion_total", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Proportion of Strains Nodulating') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+ggplot(data=barGraphStats(data=nodProp%>%filter(host_match!='control'), variable="nod_proportion_func", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Proportion of Strains\nMaking Functional Nodules') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
+
+
+ggplot(data=barGraphStats(data=nodRaw%>%filter(host_match!='control'), variable="nod_total", byFactorNames=c("plant", "original_host")), aes(x=plant, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Number of Nodules') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
 
 
 
 
 
+
+###strain by species interaction figures
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('ACGL')
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('ACWR')
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('GEMO')
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('LUAR')
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('SPJU')
+
+ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  xlab('Strain') + ylab('Total Biomass (g)') +
+  theme(axis.text.x=element_text(angle=90)) +
+  ggtitle('ULEU')
+
+
+
+#figure out which strains didn't nodulate anything
+nodNone <- nodRaw%>%
+  group_by(strain_label)%>%
+  summarise(tot_nodules=sum(nod_total))
+
+#make a column with control vs not control and then make a bar in figure of controls, not nodulated but inoculated, and nodulated
+nodSize <- nodRaw%>%
+  mutate(noded=ifelse(nod_total==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(noded, ino_status, sep='::'))%>%
+  group_by(plant, original_host, noded, ino_type)%>%
+  summarise(bio=mean(total_biomass))
+
+ggplot(data=barGraphStats(data=nodSize%>%filter(plant=='ACWR'), variable="bio", byFactorNames=c("original_host", "noded")), aes(x=original_host, y=mean, fill=as.factor(noded))) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2)
+
+
+
+ggplot(data=barGraphStats(data=nodSize, variable="bio", byFactorNames=c("plant", "ino_type")), aes(x=plant, y=mean, fill=as.factor(ino_type))) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Species') + ylab('Total Biomass (g)')
+
+
+
+
+#from rhizobial side of things
+#total nodules formed
+ggplot(data=barGraphStats(data=rhizProp%>%filter(host_status!='control'), variable="rhiz_proportion_total", byFactorNames=c("original_host", "host_status")), aes(x=host_status, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Rhizobial Strain Origin') + ylab('Proportions of Plants Nodulated')
+
+ggplot(data=barGraphStats(data=rhizProp%>%filter(host_status!='control'), variable="rhiz_proportion_total", byFactorNames=c("host_status")), aes(x=host_status, y=mean)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Rhizobial Strain Origin') + ylab('Proportions of Plants Nodulated')
+
+
+#functional nodules formed
+ggplot(data=barGraphStats(data=rhizProp%>%filter(host_status!='control'), variable="rhiz_proportion_func", byFactorNames=c("original_host", "host_status")), aes(x=host_status, y=mean, fill=original_host)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Rhizobial Strain Origin') + ylab('Proportions of Plants Nodulated')
+
+ggplot(data=barGraphStats(data=rhizProp%>%filter(host_status!='control'), variable="rhiz_proportion_func", byFactorNames=c("host_status")), aes(x=host_status, y=mean)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Rhizobial Strain Origin') + ylab('Proportions of Plants Nodulated')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
