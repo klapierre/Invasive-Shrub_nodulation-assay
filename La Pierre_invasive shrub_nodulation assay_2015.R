@@ -67,9 +67,6 @@ nodCore <- nodRaw%>%
 
 ###mixed effects model for height with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
 
-#visualize the data
-boxplot(height_cm ~ plant_status*host_match, nodRaw)
-
 #mixed effects model
 nodRegHeight <- lme(height_cm ~ plant_status*host_match, random=~1|plant, data=nodRaw)
 summary(nodRegHeight)
@@ -84,7 +81,12 @@ lsmeans(nodRegHeight, cld~plant_status*host_match)
 # qqline(resNodRegHeight)
 # plot(nodRegHeight)
 
-
+ggplot(data=barGraphStats(data=nodRaw, variable="height_cm", byFactorNames=c("plant_status", "host_match")), aes(x=plant_status, y=mean, fill=host_match)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  xlab('Plant Status') + ylab('Height (cm)') +
+  scale_shape_discrete(name='Strain Origin') +
+  theme(legend.title=element_text('Strain Origin') ) #can't get legend title to work!
 
 
 
