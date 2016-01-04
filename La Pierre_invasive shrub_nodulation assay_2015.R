@@ -247,6 +247,5 @@ ggplot(data=barGraphStats(data=rhizProp%>%filter(host_status!='control'), variab
 
 
 
-
   
 
