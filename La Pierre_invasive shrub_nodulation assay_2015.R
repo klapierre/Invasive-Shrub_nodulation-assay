@@ -1,12 +1,10 @@
 library(plyr)
 library(ggplot2)
-library(reshape2)
 library(grid)
 library(nlme)
 library(lsmeans)
 library(multcomp)
 library(multcompView)
-library(reshape2)
 library(bipartite)
 library(tidyr)
 library(dplyr)
@@ -44,6 +42,9 @@ barGraphStats <- function(data, variable, byFactorNames) {
 
 #################################################
 #################################################
+
+#source data management code
+source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation assay_2015_data management.R')
 
 ###mixed effects model for height with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
 

@@ -1,12 +1,4 @@
 library(plyr)
-library(reshape2)
-library(grid)
-library(nlme)
-library(lsmeans)
-library(multcomp)
-library(multcompView)
-library(reshape2)
-library(bipartite)
 library(tidyr)
 library(dplyr)
 
