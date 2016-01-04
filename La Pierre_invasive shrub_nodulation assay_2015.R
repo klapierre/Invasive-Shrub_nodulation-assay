@@ -45,36 +45,6 @@ barGraphStats <- function(data, variable, byFactorNames) {
 #################################################
 #################################################
 
-#import datafile
-nodRaw <- read.csv('La Pierre_invasive shrub_noduation assay_2015.csv')%>%
-  #add total nodule number and functional nodule number variables
-  mutate(nod_total=clear+white+pink+brown+purple+red+green, nod_func=pink+purple+red)%>%
-  #add total biomass and root:shoot ratio variables
-  mutate(total_biomass=shoots_g+roots_g, rootshoot=roots_g/shoots_g)%>%
-  #remove plants that did not get inoculated or that died before harvest and control plants
-  filter(harvest_date!='NA')%>%
-  #remove CYSC plants for not, because not inoculated with own rhizobia, and LUBI because so many died
-  filter(plant!='CYSC', plant!='LUBI')
-
-#get proportion of plants that nodulated for each category
-nodProp <- nodRaw%>%
-  mutate(nodulated_total=ifelse(nod_total>0, 1, 0), nodulated_func=ifelse(nod_func>0, 1, 0))%>%
-  select(pot, plant, plant_status, strain_label, original_host, host_match, nodulated_total, nodulated_func, nod_total, nod_func)%>%
-  group_by(plant, plant_status, host_match, original_host)%>%
-  summarise(nod_N=length(nod_total), nod_total_count=sum(nodulated_total), nod_func_count=sum(nodulated_func))%>%
-  mutate(nod_proportion_total=nod_total_count/nod_N, nod_proportion_func=nod_func_count/nod_N)
-
-#get proportion of plants each strain can affiliate with
-rhizProp <- nodRaw%>%
-  mutate(total_nod_formed=ifelse(nod_total>0, 1, 0))%>%
-  mutate(func_nod_formed=ifelse(nod_func>0, 1, 0))%>%
-  select(pot, plant, plant_status, strain_label, original_host, host_match, total_nod_formed, func_nod_formed, nod_total, nod_func)%>%
-  group_by(strain_label, original_host)%>%
-  summarise(rhiz_count_total=sum(total_nod_formed), rhiz_count_func=sum(func_nod_formed))%>%
-  mutate(rhiz_proportion_total=rhiz_count_total/6, rhiz_proportion_func=rhiz_count_func/6)%>%
-  mutate(host_status=ifelse(original_host=='GEMO', 'invasive', ifelse(original_host=='MEPO', 'invasive', ifelse(original_host=='SPJU', 'invasive', ifelse(original_host=='ULEU', 'invasive', ifelse(original_host=='Vicia', 'invasive', ifelse(original_host=='ACGL', 'native', ifelse(original_host=='ACHE', 'native', ifelse(original_host=='ACST', 'native', ifelse(original_host=='ACWR', 'native', ifelse(original_host=='LUAR', 'native', ifelse(original_host=='LUBI', 'native', ifelse(original_host=='LUNA', 'native', 'control')))))))))))))
-
-
 ###mixed effects model for height with plant status (invasive/native) and host match (original host/local Bay Area host/away invasive host) and plant species as a random factor
 
 #mixed effects model
@@ -228,18 +198,6 @@ ggplot(data=nodRaw%>%filter(plant=='ACGL'), aes(x=strain_label, y=total_biomass,
   theme(axis.text.x=element_text(angle=90)) +
   ggtitle('ULEU')
 
-
-
-#figure out which strains didn't nodulate anything
-nodNone <- nodRaw%>%
-  group_by(strain_label)%>%
-  summarise(tot_nodules=sum(nod_total))
-
-#make a column with control vs not control and then make a bar in figure of controls, not nodulated but inoculated, and nodulated
-nodSize <- nodRaw%>%
-  mutate(total_nod=ifelse(nod_total==0, 0, 1), func_nod=ifelse(nod_func==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(total_nod, func_nod, ino_status, sep='::'))%>%
-  group_by(plant, original_host, func_nod, total_nod, ino_type)%>%
-  summarise(bio=mean(total_biomass))
 
 ggplot(data=barGraphStats(data=nodSize, variable="bio", byFactorNames=c("plant", "ino_type")), aes(x=plant, y=mean, fill=as.factor(ino_type))) +
   geom_bar(stat='identity', position=position_dodge()) +
