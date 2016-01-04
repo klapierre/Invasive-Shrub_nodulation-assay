@@ -36,13 +36,29 @@ rhizProp <- nodRaw%>%
   mutate(rhiz_proportion_total=rhiz_count_total/6, rhiz_proportion_func=rhiz_count_func/6)%>%
   mutate(host_status=ifelse(original_host=='GEMO', 'invasive', ifelse(original_host=='MEPO', 'invasive', ifelse(original_host=='SPJU', 'invasive', ifelse(original_host=='ULEU', 'invasive', ifelse(original_host=='Vicia', 'invasive', ifelse(original_host=='ACGL', 'native', ifelse(original_host=='ACHE', 'native', ifelse(original_host=='ACST', 'native', ifelse(original_host=='ACWR', 'native', ifelse(original_host=='LUAR', 'native', ifelse(original_host=='LUBI', 'native', ifelse(original_host=='LUNA', 'native', 'control')))))))))))))
 
+###make interaction matrix for plant by strain origin interactions (with proportion of the strains nodulating as the data)
+
+#total nodules
+interactionTotal <- nodProp%>%
+  filter(host_match!='control')%>%
+  ungroup()%>%
+  select(plant, plant_status, original_host, nod_proportion_total)%>%
+  spread(key=original_host, value=nod_proportion_total, fill=NA)
+
+#functional nodules
+interactionFunc <- nodProp%>%
+  filter(host_match!='control')%>%
+  ungroup()%>%
+  select(plant, plant_status, original_host, nod_proportion_func)%>%
+  spread(key=original_host, value=nod_proportion_func, fill=NA)
+
 
 #figure out which strains didn't nodulate anything
 nodNone <- nodRaw%>%
   group_by(strain_label)%>%
   summarise(tot_nodules=sum(nod_total))
 
-#make a column with control vs not control and then make a bar in figure of controls, not nodulated but inoculated, and nodulated
+#make a column with control vs not control
 nodSize <- nodRaw%>%
   mutate(total_nod=ifelse(nod_total==0, 0, 1), func_nod=ifelse(nod_func==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(total_nod, func_nod, ino_status, sep='::'))%>%
   group_by(plant, original_host, func_nod, total_nod, ino_type)%>%
