@@ -43,14 +43,54 @@ barGraphStats <- function(data, variable, byFactorNames) {
 source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation assay_2015_data management.R')
 
 
-#make an interaction web for total nodules and functional nodules
+###make an interaction web for total nodules and functional nodules
+
+#total nodules
+matrixTotal <- interactionTotal
+rownames(matrixTotal) <- matrixTotal$plant
+matrixTotal <-  matrixTotal%>%
+  select(-plant_status, -plant)
+
+#network test from both directions
+networkIndices <- specieslevel(t(matrixTotal))
+
+#plot the interaction web
+
+plantcolors<-c("#00990099", "#00990099", "#FF990099",  "#00990099", "#FF990099", "#FF990099")
+straincolors<-c(rep("black"))
 
 
+plotweb(t(matrixTotal), bor.col.interaction=plantcolors,  col.interaction=plantcolors, arrow="no", method="normal", labsize=1.5, abuns.type="independent",
+        text.rot=90, low.lab.dis=NULL,
+        y.width.high=0.005,y.width.low=0.005, col.low="black", col.high="black",
+        low.abun.col="black", high.abun.col="black",
+        bor.col.high="black", bor.col.low="black",
+        sequence=list(seq.high=c('ACGL', 'ACWR', 'LUAR', 'GEMO', 'SPJU', 'ULEU'),
+                 seq.low=c('ACGL', 'ACHE', 'ACST', 'ACWR', 'LUAR', 'LUBI', 'LUNA', 'GEMO', 'MEPO', 'SPJU', 'ULEU', 'Vicia')))
 
 
+#functional nodules
+matrixFunc <- interactionFunc
+rownames(matrixFunc) <- matrixFunc$plant
+matrixFunc <-  matrixFunc%>%
+  select(-plant_status, -plant)
+
+#network test from both directions
+networkIndices <- specieslevel(t(matrixFunc))
+
+#plot the interaction web
+
+plantcolors<-c("#00990099", "#00990099", "#FF990099",  "#00990099", "#FF990099", "#FF990099")
+straincolors<-c(rep("black"))
 
 
-
+plotweb(t(matrixFunc), bor.col.interaction=plantcolors,  col.interaction=plantcolors, arrow="no", method="normal", labsize=1.5, abuns.type="independent",
+        text.rot=90, low.lab.dis=NULL,
+        y.width.high=0.005,y.width.low=0.005, col.low="black", col.high="black",
+        low.abun.col="black", high.abun.col="black",
+        bor.col.high="black", bor.col.low="black",
+        sequence=list(seq.high=c('ACGL', 'ACWR', 'LUAR', 'GEMO', 'SPJU', 'ULEU'),
+                      seq.low=c('ACGL', 'ACHE', 'ACST', 'ACWR', 'LUAR', 'LUBI', 'LUNA', 'GEMO', 'MEPO', 'SPJU', 'ULEU', 'Vicia')))
 
 
 
