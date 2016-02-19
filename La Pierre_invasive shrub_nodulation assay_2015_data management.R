@@ -70,3 +70,10 @@ nodSize <- nodRaw%>%
   mutate(total_nod=ifelse(nod_total==0, 0, 1), func_nod=ifelse(nod_func==0, 0, 1), ino_status=ifelse(host_match=='control', 'ctl', 'ino'), ino_type=paste(total_nod, func_nod, ino_status, sep='::'))%>%
   group_by(plant, original_host, func_nod, total_nod, ino_type)%>%
   summarise(bio=mean(total_biomass))
+
+#subset out only plants inoculated with strains that have molecular data (i.e., assigned OTUs)
+nodOTU <- nodRaw%>%
+  filter(concatenated_OTU!='NA', concatenated_OTU!='', plant!='ACWR')
+
+#write OTU file
+write.csv(nodOTU, 'La Pierre_invasive shrub_nodulation assay_OTU strains and field spp')
