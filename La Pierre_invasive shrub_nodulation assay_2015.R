@@ -15,7 +15,6 @@ theme_set(theme_bw())
 theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=16),
              axis.title.y=element_text(size=20, angle=90, vjust=0.5), axis.text.y=element_text(size=16),
              plot.title = element_text(size=24, vjust=2),
-             axis.ticks.length=unit(-0.25, "cm"), axis.ticks.margin=unit(0.5, "cm"),
              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
              legend.title=element_blank(), legend.text=element_text(size=20))
 
@@ -46,7 +45,27 @@ barGraphStats <- function(data, variable, byFactorNames) {
 #source data management code
 source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation assay_2015_data management.R')
 
+#subset out only the plant species relevent to field data from proportional nodulation data
+nodPropField <- nodProp%>%
+  filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
+  filter(host_match!='control')
 
+#mixed effects model for proportion nodulating (total nodules)
+nodPropFieldModel <- lme(nod_proportion_total ~ plant_status*host_match, random=~1|plant, data=nodPropField)
+summary(nodPropFieldModel)
+anova(nodPropFieldModel)
+lsmeans(nodPropFieldModel, cld~plant_status*host_match)
+
+#plot proportion strains nodulating by host match and plant status
+ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
+  geom_bar(stat='identity', position=position_dodge(), colour='black') +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  scale_x_discrete(limits=c('native', 'invasive')) +
+  scale_fill_manual(breaks=c('native', 'invader', 'original'),
+                      labels=c('native', 'invasive', 'original'),
+                      values=c("#009900", "#FF9900", "#FFFFFF")) +
+  xlab('Plant Status') +
+  ylab('Proportion Strains Nodulating')
 
 
 # #exploratory analysis
