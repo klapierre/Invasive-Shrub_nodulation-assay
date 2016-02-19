@@ -76,4 +76,4 @@ nodOTU <- nodRaw%>%
   filter(concatenated_OTU!='NA', concatenated_OTU!='', plant!='ACWR')
 
 #write OTU file
-write.csv(nodOTU, 'La Pierre_invasive shrub_nodulation assay_OTU strains and field spp')
+write.csv(nodOTU, 'La Pierre_invasive shrub_nodulation assay_OTU strains and field spp.csv')
