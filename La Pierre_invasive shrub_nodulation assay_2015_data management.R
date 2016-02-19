@@ -7,8 +7,14 @@ setwd('C:\\Users\\Kim\\Dropbox\\bigcb\\invasive shrubs project\\nodulation exper
 #################################################
 #################################################
 
+#import strain information
+strain <- read.csv('La Pierre_invasive shrub_noduation assay_2015_strains used.csv')%>%
+  select(-original_host)
+
 #import datafile
 nodRaw <- read.csv('La Pierre_invasive shrub_noduation assay_2015.csv')%>%
+  #merge with strain information
+  left_join(strain)%>%
   #add total nodule number and functional nodule number variables
   mutate(nod_total=clear+white+pink+brown+purple+red+green, nod_func=pink+purple+red)%>%
   #add total biomass and root:shoot ratio variables
@@ -17,6 +23,7 @@ nodRaw <- read.csv('La Pierre_invasive shrub_noduation assay_2015.csv')%>%
   filter(harvest_date!='NA')%>%
   #remove CYSC plants for not, because not inoculated with own rhizobia, and LUBI because so many died
   filter(plant!='CYSC', plant!='LUBI')
+
 
 #get proportion of plants that nodulated for each category
 nodProp <- nodRaw%>%
