@@ -1,5 +1,6 @@
 library(plyr)
 library(ggplot2)
+library(ggrepel)
 library(grid)
 library(nlme)
 library(lsmeans)
@@ -38,3 +39,67 @@ barGraphStats <- function(data, variable, byFactorNames) {
 
 #################################################
 #################################################
+
+isotope <- read.csv('La Pierre KJL_nod_pilots 0116.csv')%>%
+  filter(d15N!='NA')
+
+Ndfa <- isotope%>%
+  select(per15N, species, inoculation_status)%>%
+  group_by(species, inoculation_status)%>%
+  summarise(per15N=mean(per15N))%>%
+  spread(key=inoculation_status, value=per15N)%>%
+  mutate(perNdfa=(100*(ctl-ino))/(ctl))
+
+#plot percent 15N for each species*inoculation combination
+ggplot(data=barGraphStats(data=isotope, variable='per15N', byFactorNames=c('species', 'inoculation_status')), aes(x=species, y=mean, fill=inoculation_status)) +
+  geom_bar(stat='identity', position=position_dodge(), colour='black') +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+  scale_fill_manual(breaks=c('ctl', 'ino'),
+                    labels=c('uninoculated', 'inoculated'),
+                    values=c("#0072B2", "#D55E00")) +
+  xlab('Plant Species') +
+  ylab('Percent 15N')
+
+#plot percent 15N for each species*inoculation combination as point graph, with notes about nodules annotated
+ggplot(data=isotope, aes(x=species, y=per15N, colour=inoculation_status, label=nodule_notes)) +
+  geom_point(size=5) +
+  geom_text_repel(segment.color='white', size=5) +
+  scale_colour_manual(breaks=c('ctl', 'ino'),
+                    labels=c('uninoculated', 'inoculated'),
+                    values=c("#0072B2", "#D55E00")) +
+  xlab('Plant Species') +
+  ylab('Percent 15N')
+
+#plot percent N derived from atmosphere for each species
+ggplot(data=Ndfa, aes(x=species, y=perNdfa)) +
+  geom_bar(stat='identity', colour='black', fill='white') +
+  xlab('Plant Species') +
+  ylab('Percent N Derived from Atmosphere')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
