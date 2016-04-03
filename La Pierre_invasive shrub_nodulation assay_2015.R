@@ -62,8 +62,8 @@ ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', by
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
   scale_x_discrete(limits=c('native', 'invasive')) +
   scale_fill_manual(breaks=c('native', 'invader', 'original'),
-                      labels=c('native', 'invasive', 'original'),
-                      values=c("#009900", "#FF9900", "#FFFFFF")) +
+                    labels=c('native', 'invasive', 'original'),
+                    values=c("#636363", "#bdbdbd", "#FFFFFF")) +
   xlab('Plant Status') +
   ylab('Proportion Strains Nodulating')
 
