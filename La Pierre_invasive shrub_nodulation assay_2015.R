@@ -12,11 +12,11 @@ library(dplyr)
 setwd('C:\\Users\\Kim\\Dropbox\\bigcb\\invasive shrubs project\\nodulation experiment')
 
 theme_set(theme_bw())
-theme_update(axis.title.x=element_text(size=20, vjust=-0.35), axis.text.x=element_text(size=16),
-             axis.title.y=element_text(size=20, angle=90, vjust=0.5), axis.text.y=element_text(size=16),
+theme_update(axis.title.x=element_text(size=20, vjust=-0.35, margin=margin(t=15)), axis.text.x=element_text(size=16),
+             axis.title.y=element_text(size=20, angle=90, vjust=0.5, margin=margin(r=15)), axis.text.y=element_text(size=16),
              plot.title = element_text(size=24, vjust=2),
              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-             legend.title=element_blank(), legend.text=element_text(size=20))
+             legend.title=element_text(size=20, margin=margin(b=20)), legend.text=element_text(size=16))
 
 ###bar graph summary statistics function
 #barGraphStats(data=, variable="", byFactorNames=c(""))
@@ -50,6 +50,27 @@ nodPropField <- nodProp%>%
   filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
   filter(host_match!='control')
 
+
+# #native vs invasive, without conspecific strains
+# nodPropFieldAllospp <- lme(nod_proportion_total ~ plant_status*host_match, random=~1|plant, data=subset(nodPropField, host_match!='original'))
+# summary(nodPropFieldAllospp)
+# anova(nodPropFieldAllospp)
+# lsmeans(nodPropFieldAllospp, cld~plant_status*host_match)
+# 
+# allosppFig <- ggplot(data=barGraphStats(data=subset(nodPropField, host_match!='original'), variable='nod_proportion_total', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
+#   geom_bar(stat='identity', position=position_dodge(), colour='black') +
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+#   scale_y_continuous(limits=c(0,1)) +
+#   scale_x_discrete(limits=c('native', 'invasive')) +
+#   scale_fill_manual(breaks=c('native', 'invader'),
+#                     labels=c('native', 'invasive'),
+#                     values=c("#636363", "#bdbdbd")) +
+#   xlab('Plant Status') +
+#   ylab('Proportion Strains Nodulating') +
+#   theme(axis.title.y=element_text(margin=margin(r=15)),
+#         axis.title.x=element_text(margin=margin(t=10))) +
+#   annotate('text', x=0.45, y=1, label='(a)', size=8, hjust='left')
+
 #mixed effects model for proportion nodulating (total nodules)
 nodPropFieldModel <- lme(nod_proportion_total ~ plant_status*host_match, random=~1|plant, data=nodPropField)
 summary(nodPropFieldModel)
@@ -61,8 +82,9 @@ ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', by
   geom_bar(stat='identity', position=position_dodge(), colour='black') +
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
   scale_x_discrete(limits=c('native', 'invasive')) +
-  scale_fill_manual(breaks=c('native', 'invader', 'original'),
-                    labels=c('native', 'invasive', 'original'),
+  scale_fill_manual(name='Isolate Source',
+                    breaks=c('native', 'invader', 'original'),
+                    labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
   xlab('Plant Status') +
   ylab('Proportion Strains Nodulating')
