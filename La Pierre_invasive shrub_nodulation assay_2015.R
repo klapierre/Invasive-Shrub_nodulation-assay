@@ -47,7 +47,7 @@ source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation ass
 
 #subset out only the plant species relevent to field data from proportional nodulation data
 nodPropField <- nodProp%>%
-  filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
+  # filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
   filter(host_match!='control')
 
 
@@ -87,7 +87,18 @@ ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', by
                     labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
   xlab('Plant Status') +
-  ylab('Proportion Strains Nodulating')
+  ylab('Proportion Isolates Nodulating')
+
+
+#boxplot of proportion strains nodulating by plant status
+ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'plant')), aes(x=plant_status, y=mean, label=plant)) +
+  geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', dotsize=1) +
+  geom_text(hjust='left', vjust='center', nudge_x=0.05, size=6) +
+  scale_x_discrete(limits=c('native', 'invasive')) +
+  scale_y_continuous(breaks=seq(0, 1, 0.2), name="Proportion Isolates Nodulating") +
+  coord_cartesian(ylim=c(0, 1)) +
+  xlab("Plant Status")
 
 
 # #exploratory analysis

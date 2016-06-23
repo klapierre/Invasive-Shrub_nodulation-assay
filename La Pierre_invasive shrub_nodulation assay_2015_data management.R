@@ -73,7 +73,7 @@ nodSize <- nodRaw%>%
 
 #subset out only plants inoculated with strains that have molecular data (i.e., assigned OTUs)
 nodOTU <- nodRaw%>%
-  filter(concatenated_OTU!='NA', concatenated_OTU!='', plant!='ACWR')
+  filter(concatenated_OTU!='NA', concatenated_OTU!='')
 
 #write OTU file
 nodOTUtable <- nodOTU%>%
