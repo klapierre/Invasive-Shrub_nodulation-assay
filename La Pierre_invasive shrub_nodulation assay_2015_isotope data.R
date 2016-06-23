@@ -61,7 +61,7 @@ ggplot(data=barGraphStats(data=isotope, variable='per15N', byFactorNames=c('spec
   ylab('Percent 15N')
 
 #plot percent 15N for each species*inoculation combination as point graph, with notes about nodules annotated
-ggplot(data=isotope, aes(x=species, y=per15N, colour=inoculation_status, label=nodule_notes)) +
+ggplot(data=isotope, aes(x=species, y=per15N, colour=inoculation_status, shape=inoculation_status, label=nodule_notes)) +
   geom_point(size=5) +
   geom_text_repel(segment.color='white', size=5) +
   scale_colour_manual(breaks=c('ctl', 'ino'),
