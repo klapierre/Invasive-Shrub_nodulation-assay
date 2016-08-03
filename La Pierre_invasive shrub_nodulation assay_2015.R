@@ -86,7 +86,7 @@ ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', by
                     breaks=c('native', 'invader', 'original'),
                     labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
-  xlab('Plant Status') +
+  xlab('Test-Legume Status') +
   ylab('Proportion Isolates Nodulating')
 
 
@@ -98,7 +98,7 @@ ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', by
   scale_x_discrete(limits=c('native', 'invasive')) +
   scale_y_continuous(breaks=seq(0, 1, 0.2), name="Proportion Isolates Nodulating") +
   coord_cartesian(ylim=c(0, 1)) +
-  xlab("Plant Status")
+  xlab("Test-Host Status")
 
 
 # #exploratory analysis
