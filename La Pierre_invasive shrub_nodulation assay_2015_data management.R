@@ -24,6 +24,15 @@ nodRaw <- read.csv('La Pierre_invasive shrub_noduation assay_2015.csv')%>%
   #remove CYSC plants for not, because not inoculated with own rhizobia, and LUBI because so many died
   filter(plant!='CYSC', plant!='LUBI')
 
+#create binary table of what plants were nodulated
+nodBinary <- nodRaw%>%
+  select(pot, block, plant, plant_status, strain_label, original_host, host_match, nod_total, concatenated_OTU, ITS_OTU, nifd_OTU, strain_taxonomy)%>%
+  #remove controls
+  filter(host_match!='control')%>%
+  #disregard whether the original host plant is the same as the test plant
+  mutate(original_status=ifelse(original_host=='ACGL'|original_host=='ACWR'|original_host=='LUAR'|original_host=='LUBI', 'native', 'invasive'))%>%
+  #create binary nodulation variable
+  mutate(nod_binary=ifelse(nod_total>0, 1, 0))
 
 #get proportion of plants that nodulated for each category
 nodProp <- nodRaw%>%

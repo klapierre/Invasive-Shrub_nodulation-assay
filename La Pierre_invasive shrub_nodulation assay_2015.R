@@ -2,6 +2,7 @@ library(plyr)
 library(ggplot2)
 library(grid)
 library(nlme)
+library(lme4)
 library(lsmeans)
 library(multcomp)
 library(multcompView)
@@ -45,10 +46,59 @@ barGraphStats <- function(data, variable, byFactorNames) {
 #source data management code
 source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation assay_2015_data management.R')
 
-#subset out only the plant species relevent to field data from proportional nodulation data
-nodPropField <- nodProp%>%
-  # filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
-  filter(host_match!='control')
+#mixed effects model for nodulation success (binary nodulation variable)
+nodBinaryModel <- glmer(nod_binary ~ plant_status*host_match + (1|plant), data=nodBinary, family=binomial)
+summary(nodBinaryModel)
+lsmeans(nodBinaryModel, cld~plant_status*host_match)
+#get table of estimates with 95% CI
+se <- sqrt(diag(vcov(nodBinaryModel))) #standard errors
+nodBinaryModelResults <- exp(cbind(estimate=fixef(nodBinaryModel), lower=fixef(nodBinaryModel)-1.96*se, upper=fixef(nodBinaryModel)+1.96*se)) #exponentiate coeffecients to get odds ratios
+
+#get predicted probabilities from glmer model
+jvalues <- with(nodBinary, list(host_match))
+predProb <- lapply(jvalues, function(j){
+  nodBinary$host_match <- j
+  predict(nodBinaryModel, newdata=nodBinary, type='response')
+})
+#bind predicted probabilities to main dataset
+predProbInfo <- cbind(nodBinary, predProb)
+names(predProbInfo)[names(predProbInfo)=='structure(c(0.842005311020883, 0.842005311020883, 0.842005311020883, '] <- 'pred_prob'
+#keep only relevant information
+predProbInfo <- predProbInfo%>%  
+  select(plant, plant_status, host_match, concatenated_OTU, ITS_OTU, nifd_OTU, original_status, pred_prob)
+
+# #plot probability of nodulation by original host status and plant status
+# ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
+#   geom_bar(stat='identity', position=position_dodge(), colour='black') +
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+#   scale_x_discrete(limits=c('native', 'invasive')) +
+#   scale_fill_manual(name='Isolate Source',
+#                     breaks=c('native', 'invader', 'original'),
+#                     labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
+#                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
+#   xlab('Test-Legume Status') +
+#   ylab('Probability of Nodulation')
+
+#boxplot of probability of nodulation by plant status
+ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames=c('plant_status', 'plant', 'host_match')), aes(x=plant_status, y=mean, fill=host_match, label=plant)) +
+  geom_boxplot() +
+  # geom_dotplot(binaxis='y', stackdir='center', dotsize=1) +
+  # geom_text(hjust='left', vjust='center', nudge_x=0.05, size=6) +
+  scale_x_discrete(limits=c('native', 'invasive')) +
+  scale_y_continuous(breaks=seq(0.5, 1, 0.1), name="Probability of Nodulation") +
+  scale_fill_manual(name='Isolate Source',
+                    breaks=c('native', 'invader', 'original'),
+                    labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
+                    values=c("#636363", "#bdbdbd", "#FFFFFF")) +
+  coord_cartesian(ylim=c(0.45, 1)) +
+  xlab("Test-Host Status")
+#export at 
+
+
+# #subset out only the plant species relevent to field data from proportional nodulation data
+# nodPropField <- nodProp%>%
+#   # filter(plant=='ACGL' | plant=='GEMO' | plant=='LUAR' | plant=='SPJU' | plant=='ULEU')%>%
+#   filter(host_match!='control')
 
 
 # #native vs invasive, without conspecific strains
@@ -71,34 +121,34 @@ nodPropField <- nodProp%>%
 #         axis.title.x=element_text(margin=margin(t=10))) +
 #   annotate('text', x=0.45, y=1, label='(a)', size=8, hjust='left')
 
-#mixed effects model for proportion nodulating (total nodules)
-nodPropFieldModel <- lme(nod_proportion_total ~ plant_status*host_match, random=~1|plant, data=nodPropField)
-summary(nodPropFieldModel)
-anova(nodPropFieldModel)
-lsmeans(nodPropFieldModel, cld~plant_status*host_match)
-
-#plot proportion strains nodulating by host match and plant status
-ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
-  geom_bar(stat='identity', position=position_dodge(), colour='black') +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
-  scale_x_discrete(limits=c('native', 'invasive')) +
-  scale_fill_manual(name='Isolate Source',
-                    breaks=c('native', 'invader', 'original'),
-                    labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
-                    values=c("#636363", "#bdbdbd", "#FFFFFF")) +
-  xlab('Test-Legume Status') +
-  ylab('Proportion Isolates Nodulating')
-
-
-#boxplot of proportion strains nodulating by plant status
-ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'plant')), aes(x=plant_status, y=mean, label=plant)) +
-  geom_boxplot() +
-  geom_dotplot(binaxis='y', stackdir='center', dotsize=1) +
-  geom_text(hjust='left', vjust='center', nudge_x=0.05, size=6) +
-  scale_x_discrete(limits=c('native', 'invasive')) +
-  scale_y_continuous(breaks=seq(0, 1, 0.2), name="Proportion Isolates Nodulating") +
-  coord_cartesian(ylim=c(0, 1)) +
-  xlab("Test-Host Status")
+# #mixed effects model for proportion nodulating (total nodules)
+# nodPropFieldModel <- lme(nod_proportion_total ~ plant_status*host_match, random=~1|plant, data=nodPropField)
+# summary(nodPropFieldModel)
+# anova(nodPropFieldModel)
+# lsmeans(nodPropFieldModel, cld~plant_status*host_match)
+# 
+# #plot proportion strains nodulating by host match and plant status
+# ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
+#   geom_bar(stat='identity', position=position_dodge(), colour='black') +
+#   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
+#   scale_x_discrete(limits=c('native', 'invasive')) +
+#   scale_fill_manual(name='Isolate Source',
+#                     breaks=c('native', 'invader', 'original'),
+#                     labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
+#                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
+#   xlab('Test-Legume Status') +
+#   ylab('Proportion Isolates Nodulating')
+# 
+# 
+# #boxplot of proportion strains nodulating by plant status
+# ggplot(data=barGraphStats(data=nodPropField, variable='nod_proportion_total', byFactorNames=c('plant_status', 'plant')), aes(x=plant_status, y=mean, label=plant)) +
+#   geom_boxplot() +
+#   geom_dotplot(binaxis='y', stackdir='center', dotsize=1) +
+#   geom_text(hjust='left', vjust='center', nudge_x=0.05, size=6) +
+#   scale_x_discrete(limits=c('native', 'invasive')) +
+#   scale_y_continuous(breaks=seq(0, 1, 0.2), name="Proportion Isolates Nodulating") +
+#   coord_cartesian(ylim=c(0, 1)) +
+#   xlab("Test-Host Status")
 
 
 # #exploratory analysis
