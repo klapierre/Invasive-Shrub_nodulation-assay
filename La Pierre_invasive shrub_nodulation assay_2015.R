@@ -67,6 +67,11 @@ names(predProbInfo)[names(predProbInfo)=='structure(c(0.842005311020883, 0.84200
 predProbInfo <- predProbInfo%>%  
   select(plant, plant_status, host_match, concatenated_OTU, ITS_OTU, nifd_OTU, original_status, pred_prob)
 
+#predicted probabilities of nodulation for genotyped strains
+predProbGeno <- predProbInfo%>%
+  group_by(plant, concatenated_OTU)%>%
+  summarise(mean_pred_prob=mean(pred_prob))
+
 # #plot probability of nodulation by original host status and plant status
 # ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
 #   geom_bar(stat='identity', position=position_dodge(), colour='black') +
@@ -91,8 +96,11 @@ ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames
                     labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
   coord_cartesian(ylim=c(0.45, 1)) +
-  xlab("Test-Host Status")
-#export at 
+  xlab("Test-Host Status") +
+  theme(legend.justification=c(0,0), legend.position=c(0,0))
+#export at 700x700
+
+
 
 
 # #subset out only the plant species relevent to field data from proportional nodulation data
