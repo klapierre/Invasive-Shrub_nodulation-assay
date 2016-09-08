@@ -91,9 +91,9 @@ ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames
   # geom_text(hjust='left', vjust='center', nudge_x=0.05, size=6) +
   scale_x_discrete(limits=c('native', 'invasive')) +
   scale_y_continuous(breaks=seq(0.5, 1, 0.1), name="Probability of Nodulation") +
-  scale_fill_manual(name='Isolate Source',
-                    breaks=c('native', 'invader', 'original'),
-                    labels=c('native allospecific', 'invasive allospecific', 'conspecific'),
+  scale_fill_manual(name='Isolate Origin',
+                    breaks=c('invader', 'native', 'original'),
+                    labels=c('invasive allospecific', 'native allospecific', 'conspecific'),
                     values=c("#636363", "#bdbdbd", "#FFFFFF")) +
   coord_cartesian(ylim=c(0.45, 1)) +
   xlab("Test-Host Status") +
