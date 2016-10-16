@@ -30,7 +30,7 @@ nodBinary <- nodRaw%>%
   #remove controls
   filter(host_match!='control')%>%
   #disregard whether the original host plant is the same as the test plant
-  mutate(original_status=ifelse(original_host=='ACGL'|original_host=='ACWR'|original_host=='LUAR'|original_host=='LUBI', 'native', 'invasive'))%>%
+  mutate(original_status=ifelse(original_host %in% c('ACGL', 'ACWR', 'LUAR', 'LUBI', 'LUNA', 'ACHE'),  'native', 'invasive'))%>%
   #create binary nodulation variable
   mutate(nod_binary=ifelse(nod_total>0, 1, 0))
 
@@ -50,7 +50,7 @@ rhizProp <- nodRaw%>%
   group_by(strain_label, original_host)%>%
   summarise(rhiz_count_total=sum(total_nod_formed), rhiz_count_func=sum(func_nod_formed))%>%
   mutate(rhiz_proportion_total=rhiz_count_total/6, rhiz_proportion_func=rhiz_count_func/6)%>%
-  mutate(host_status=ifelse(original_host=='GEMO', 'invasive', ifelse(original_host=='MEPO', 'invasive', ifelse(original_host=='SPJU', 'invasive', ifelse(original_host=='ULEU', 'invasive', ifelse(original_host=='Vicia', 'invasive', ifelse(original_host=='ACGL', 'native', ifelse(original_host=='ACHE', 'native', ifelse(original_host=='ACST', 'native', ifelse(original_host=='ACWR', 'native', ifelse(original_host=='LUAR', 'native', ifelse(original_host=='LUBI', 'native', ifelse(original_host=='LUNA', 'native', 'control')))))))))))))
+  mutate(host_status=ifelse(original_host %in% c('GEMO', 'MEPO', 'SPJU', 'ULEU', 'Vicia'), 'invasive', ifelse(original_host %in% c('ACGL', 'ACHE', 'ACST', 'ACWR', 'LUAR', 'LUBI', 'LUNA'), 'native', 'control')))
 
 ###make interaction matrix for plant by strain origin interactions (with proportion of the strains nodulating as the data)
 
