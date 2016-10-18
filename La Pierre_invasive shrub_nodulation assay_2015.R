@@ -1,8 +1,10 @@
 library(plyr)
 library(ggplot2)
+library(RColorBrewer)
 library(grid)
 library(nlme)
 library(lme4)
+library(dist.R)
 library(lsmeans)
 library(multcomp)
 library(multcompView)
@@ -71,6 +73,75 @@ predProbInfo <- predProbInfo%>%
 predProbGeno <- predProbInfo%>%
   group_by(plant, concatenated_OTU)%>%
   summarise(mean_pred_prob=mean(pred_prob))
+
+
+###heat map depicting binary nodulation outcomes
+#order the strains by original host type and species
+nodBinary <- nodBinary[order(nodBinary$original_host, nodBinary$original_status),]
+
+#sort out plant status and strain origin
+nameFunction <- function(data) {
+  result <- data[[2]]
+  names(result) <- as.character(data[[1]])
+  result
+}
+
+plantNames <- (
+  nodBinary%>%
+    group_by(plant)%>%
+    summarize(status={stopifnot(length(unique(plant_status))==1); plant_status[1]})%>%
+    nameFunction()
+)
+
+bacteriaNames <- (
+  nodBinary%>%
+    group_by(strain_label)%>%
+    summarize(status={stopifnot(length(unique(original_status))==1); original_status[1]})%>%
+    nameFunction()
+)
+
+#generate heatmap
+heatmapNodulation <- nodBinary%>%
+  select(plant, strain_label, nod_binary, original_status, original_host)%>%
+  spread(plant, nod_binary)
+heatmapNodulation <- heatmapNodulation[order(heatmapNodulation$original_status, heatmapNodulation$original_host),]%>%
+  select(strain_label, ACGL, ACWR, GEMO, LUAR, SPJU, ULEU)
+
+heatmapNodulation[is.na(heatmapNodulation)] <- -1
+
+heatmapMatrix <- as.matrix(heatmapNodulation[,-1])
+rownames(heatmapMatrix) <- heatmapNodulation[,1]
+
+reverseNAdist <- function(x,method) {
+  x[x==-1] <- NA
+  dist(x, method=method)
+}
+
+#binary heatmap
+binaryHeatmapMatrix <- heatmapMatrix
+binaryColors <- c('white', 'grey', 'black')
+binaryBreaks <- c(-2,-0.5,0.5,2)
+heatmap(binaryHeatmapMatrix, Rowv=NA, margins=c(5,18), breaks=binaryBreaks, col=binaryColors, scale='none',
+        RowSideColors=ifelse(bacteriaNames[rownames(heatmapMatrix)]=='native', '#595959', '#A2A2A2'),
+        ColSideColors=ifelse(plantNames[colnames(heatmapMatrix)]=='native', '#595959', '#A2A2A2'),
+        distfun=function(x) reverseNAdist(x, method='binary'))
+legend('topright',
+       legend=c('N/A', 'No', 'Yes'),
+       title='Nodulation Success',
+       fill=binaryColors,
+       bty='n')
+legend('right',
+      legend=c('Native', 'Invasive'),
+      title='Plant Status and\nRhizobia Origin',
+      fill=c('#595959', '#A2A2A2'),
+      bty='n')
+
+#for host_match: can test overall if there is a difference in prob of nodulation within native or invasive for the three host_match categories
+#for plant_status: within each host_match category, is there a difference between the plant_status categories
+
+#can test model accuracy by leo bryman approach: pull out 20% of data, run model on the 80% and see how well it predicts outcome in remaining 20%
+#can do this first on the plant status question, then do it with the added information of host-match and see does the prediction improve a lot?
+#
 
 # #plot probability of nodulation by original host status and plant status
 # ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames=c('plant_status', 'host_match')), aes(x=plant_status, y=mean, fill=host_match)) +
@@ -348,3 +419,96 @@ ggplot(data=barGraphStats(data=predProbInfo, variable='pred_prob', byFactorNames
 #   geom_bar(stat='identity', position=position_dodge()) +
 #   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), position=position_dodge(0.9), width=0.2) +
 #   xlab('Rhizobial Strain Origin') + ylab('Proportions of Plants Nodulated')
+
+
+
+data <- nodBinary
+
+# Sort out plant status and bacteria origin for later use
+named.vector.from.data.frame <- function(data) {
+  result <- data[[2]]
+  names(result) <- as.character(data[[1]])
+  result
+}
+plant.to.status <- (
+  data
+  %>% group_by(plant)
+  %>% summarize(status={stopifnot(length(unique(plant_status)) == 1); plant_status[1]})
+  %>% named.vector.from.data.frame()
+)
+bacteria.to.origin <- (
+  data
+  %>% group_by(strain_label)
+  %>% summarize(status={stopifnot(length(unique(original_status)) == 1); original_status[1]})
+  %>% named.vector.from.data.frame()
+)
+
+# Heatmap preliminaries
+heatmap.data <- data%>%
+  select(plant, strain_label, nod_binary, original_status, original_host)%>%
+  spread(plant, nod_binary)
+heatmap.data <- heatmap.data[order(heatmap.data$original_status, heatmap.data$original_host),]%>%
+  select(strain_label, ACGL, ACWR, GEMO, LUAR, SPJU, ULEU)
+
+heatmap.matrix <- as.matrix(heatmap.data[, -1])
+rownames(heatmap.matrix) <- heatmap.data[, 1]
+heatmap.matrix[is.na(heatmap.matrix)] <- -1
+
+reverse.na.dist <- function(x, method) {
+  x[x == -1] <- NA
+  dist(x, method=method)
+}
+draw.heatmap <- function(heatmap.matrix, distance.method, colors, breaks) {
+  row.colors <- ifelse(bacteria.to.origin[rownames(heatmap.matrix)] == 'native', 'green', 'blue')
+  col.colors <- ifelse(plant.to.status[colnames(heatmap.matrix)] == 'native', 'green', 'blue')
+  
+  heatmap(
+    heatmap.matrix,
+    distfun=function(x) reverse.na.dist(x, method=distance.method),
+    scale='none',
+    col=colors,
+    breaks=breaks,
+    RowSideColors=row.colors,
+    ColSideColors=col.colors,
+    margins=c(5,18),
+    Rowv=NA
+  )
+  legend(
+    "right",
+    legend=c('Native', 'Invasive'),
+    title='Plant status and\nbacteria origin',
+    fill=c('green', 'blue'),
+    bty='n'
+  )
+}
+
+# Count heatmap
+colors <- c('black', brewer.pal(9, 'YlOrRd'))
+node.count.quantiles <- quantile(
+  data$nod_total[data$nod_total > 0],
+  seq(0, 1, length.out=length(colors) - 2),
+  na.rm=TRUE
+)
+breaks <- c(-2, -0.5, 0, node.count.quantiles)
+draw.heatmap(heatmap.matrix, 'manhattan', colors, breaks)
+legend(
+  'topright',
+  legend=c('Missing', '0', sprintf('(%.1f, %.1f]', breaks[-c(1, 2, length(breaks))], breaks[-(1:3)])),
+  title='Nodule count',
+  fill=colors,
+  bty='n'
+)
+
+# Binary heatmap
+binary.heatmap.matrix <- ifelse(heatmap.matrix > 0, 1, heatmap.matrix)
+binary.heatmap.matrix <- binary.heatmap.matrix[order(bacteria.to.origin[rownames(binary.heatmap.matrix)]),]
+binary.colors <- c('white', 'grey', 'black')
+binary.breaks <- c(-2, -0.5, 0.5, 2)
+draw.heatmap(binary.heatmap.matrix, 'binary', binary.colors, binary.breaks)
+legend(
+  'topright',
+  legend=c('Missing', 'No', 'Yes'),
+  title='Nodulated?',
+  fill=binary.colors,
+  bty='n'
+)
