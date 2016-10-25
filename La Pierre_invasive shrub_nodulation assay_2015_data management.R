@@ -34,7 +34,9 @@ nodBinary <- nodRaw%>%
   #disregard whether the original host plant is the same as the test plant
   mutate(original_status=ifelse(original_host %in% c('ACGL', 'ACWR', 'LUAR', 'LUBI', 'LUNA', 'ACHE', 'ACST'),  'native', 'invasive'))%>%
   #create binary nodulation variable
-  mutate(nod_binary=ifelse(nod_total>0, 1, 0))
+  mutate(nod_binary=ifelse(nod_total>0, 1, 0))%>%
+  mutate(is_conspecific=(host_match == 'original'))%>%
+  mutate(host_match_factor=plyr::mapvalues(host_match, c('original', 'native', 'invader'), c('Conspecific', 'Native allospecific', 'Invasive allospecific')))
 
 #get proportion of plants that nodulated for each category
 nodProp <- nodRaw%>%

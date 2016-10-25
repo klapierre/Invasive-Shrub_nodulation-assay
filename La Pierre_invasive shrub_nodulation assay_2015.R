@@ -48,31 +48,26 @@ barGraphStats <- function(data, variable, byFactorNames) {
 #source data management code
 source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation assay_2015_data management.R')
 
-#mixed effects model for nodulation success (binary nodulation variable)
-nodBinaryModel <- glmer(nod_binary ~ plant_status*host_match + (1|plant), data=nodBinary, family=binomial)
-summary(nodBinaryModel)
-lsmeans(nodBinaryModel, cld~plant_status*host_match)
-#get table of estimates with 95% CI
-se <- sqrt(diag(vcov(nodBinaryModel))) #standard errors
-nodBinaryModelResults <- exp(cbind(estimate=fixef(nodBinaryModel), lower=fixef(nodBinaryModel)-1.96*se, upper=fixef(nodBinaryModel)+1.96*se)) #exponentiate coeffecients to get odds ratios
+#do conspecifics nodulate more than allospecifics? do natives nodulate more than invasives?
+summary(conspecificPlantStatusModel <- glm(nod_binary ~ plant_status + is_conspecific, data=nodBinary, family=binomial))
 
-#get predicted probabilities from glmer model
-jvalues <- with(nodBinary, list(host_match))
-predProb <- lapply(jvalues, function(j){
-  nodBinary$host_match <- j
-  predict(nodBinaryModel, newdata=nodBinary, type='response')
-})
-#bind predicted probabilities to main dataset
-predProbInfo <- cbind(nodBinary, predProb)
-names(predProbInfo)[names(predProbInfo)=='structure(c(0.842005311020883, 0.842005311020883, 0.842005311020883, '] <- 'pred_prob'
-#keep only relevant information
-predProbInfo <- predProbInfo%>%  
-  select(plant, plant_status, host_match, concatenated_OTU, ITS_OTU, nifd_OTU, original_status, pred_prob)
+  #get confidence intervals around plant status and conspecific traits
+  print(conspecificCI <- exp(confint(conspecificPlantStatusModel, 'is_conspecificTRUE')))
+  print(plantStatusCI <- exp(confint(conspecificPlantStatusModel, 'plant_statusnative')))
 
-#predicted probabilities of nodulation for genotyped strains
-predProbGeno <- predProbInfo%>%
-  group_by(plant, concatenated_OTU)%>%
-  summarise(mean_pred_prob=mean(pred_prob))
+#is there an interactions between plant status and rhizobial status (con vs allospecific) in nodulation success?
+#test for interaction with nested model chi-squared test
+summary(conspecificPlantStatusInteraction <- update(conspecificPlantStatusModel, . ~ . + plant_status:is_conspecific))
+print(conspecificPlantStatusInteractionPvalue <- anova(conspecificPlantStatusModel, conspecificPlantStatusInteraction, test='Chisq')[2,'Pr(>Chi)'])
+
+#do native allospecifics nodulate more with native plants and invasive allospecifics nodulate more with invasive plants?
+#create table of the numbers of strains that are allospecific nodulators for natives and invasives
+allospecificTable <- xtabs(~ plant_status + host_match_factor + nod_binary, data=droplevels(filter(nodBinary, host_match %in% c('native', 'invader'))))
+#fisher test for native species
+print(nativeTest <- fisher.test(allospecificTable['native',,]))
+print(invasiveTest <- fisher.test(allospecificTable['invasive',,][c(2,1),]))
+
+
 
 
 ###heat map depicting binary nodulation outcomes
