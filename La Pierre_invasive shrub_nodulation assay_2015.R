@@ -4,7 +4,7 @@ library(RColorBrewer)
 library(grid)
 library(nlme)
 library(lme4)
-library(dist.R)
+# library(dist.R)
 library(lsmeans)
 library(multcomp)
 library(multcompView)
@@ -51,30 +51,39 @@ source('Invasive-Shrub_nodulation-assay\\La Pierre_invasive shrub_nodulation ass
 #bonferroni correction for multiple tests (3 tests, so corrected by 3)
 bonferroniCorrection <- 1-0.05/3
 
-#do conspecifics nodulate more than allospecifics? do natives nodulate more than invasives?
-summary(conspecificPlantStatusModel <- glm(nod_binary ~ plant_status + is_conspecific, data=nodBinary, family=binomial))
+#keep only invasives
+nodBinaryInv <- subset(nodBinary, subset=(plant_status=='invasive'))
 
-  #get confidence intervals around plant status and conspecific traits
-  print(conspecificCI <- exp(confint(conspecificPlantStatusModel, 'is_conspecificTRUE', level=bonferroniCorrection)))
-  print(plantStatusCI <- exp(confint(conspecificPlantStatusModel, 'plant_statusnative', level=bonferroniCorrection)))
+#do conspecifics nodulate more than allospecifics? do analysis for each plant separately (we don't care about differences among the three legumes)
+summary(conspecificGEMOmodel <- glm(nod_binary ~ is_conspecific, data=subset(nodBinaryInv, plant=='GEMO'), family=binomial))
+summary(conspecificSPJUmodel <- glm(nod_binary ~ is_conspecific, data=subset(nodBinaryInv, plant=='SPJU'), family=binomial))
+summary(conspecificULEUmodel <- glm(nod_binary ~ is_conspecific, data=subset(nodBinaryInv, plant=='ULEU'), family=binomial))
 
-#is there an interactions between plant status and rhizobial status (con vs allospecific) in nodulation success?
-#test for interaction with nested model chi-squared test
-summary(conspecificPlantStatusInteraction <- update(conspecificPlantStatusModel, . ~ . + plant_status:is_conspecific))
-print(conspecificPlantStatusInteractionPvalue <- anova(conspecificPlantStatusModel, conspecificPlantStatusInteraction, test='Chisq')[2,'Pr(>Chi)'])
+  #get confidence intervals around conspecific traits
+  print(conspecificCI <- exp(confint(conspecificGEMOmodel, 'is_conspecificTRUE', level=0.95)))
+  print(conspecificCI <- exp(confint(conspecificSPJUmodel, 'is_conspecificTRUE', level=0.95)))
+  print(conspecificCI <- exp(confint(conspecificULEUmodel, 'is_conspecificTRUE', level=0.95)))
 
-#do native allospecifics nodulate more with native plants and invasive allospecifics nodulate more with invasive plants?
-#create table of the numbers of strains that are allospecific nodulators for natives and invasives
-allospecificTable <- xtabs(~ plant_status + host_match_factor + nod_binary, data=droplevels(filter(nodBinary, host_match %in% c('native', 'invader'))))
+#do native or invasive allospecifics nodulate more the three invasive plants?
+#create table of the numbers of strains that are allospecific nodulators for each invader
+allospecificTableGEMO <- xtabs(~ host_match_factor + nod_binary, data=droplevels(filter(subset(nodBinaryInv, plant=='GEMO'), host_match %in% c('native', 'invader'))))
 #fisher test for native species
-print(nativeTest <- fisher.test(allospecificTable['native',,], conf.level=bonferroniCorrection))
-print(invasiveTest <- fisher.test(allospecificTable['invasive',,][c(2,1),], conf.level=bonferroniCorrection))
+print(nativeTest <- fisher.test(allospecificTableGEMO[,], conf.level=bonferroniCorrection))
+print(invasiveTest <- fisher.test(allospecificTableGEMO[,][c(2,1),], conf.level=bonferroniCorrection))
 
+allospecificTableSPJU <- xtabs(~ host_match_factor + nod_binary, data=droplevels(filter(subset(nodBinaryInv, plant=='SPJU'), host_match %in% c('native', 'invader'))))
+#fisher test for native species
+print(nativeTest <- fisher.test(allospecificTableSPJU[,], conf.level=bonferroniCorrection))
+print(invasiveTest <- fisher.test(allospecificTableSPJU[,][c(2,1),], conf.level=bonferroniCorrection))
 
+allospecificTableULEU <- xtabs(~ host_match_factor + nod_binary, data=droplevels(filter(subset(nodBinaryInv, plant=='ULEU'), host_match %in% c('native', 'invader'))))
+#fisher test for native species
+print(nativeTest <- fisher.test(allospecificTableULEU[,], conf.level=bonferroniCorrection))
+print(invasiveTest <- fisher.test(allospecificTableULEU[,][c(2,1),], conf.level=bonferroniCorrection))
 
 ###heat map depicting binary nodulation outcomes
 #order the strains by original host type and species
-nodBinary <- nodBinary[order(nodBinary$original_host, nodBinary$original_status),]
+nodBinaryInv <- nodBinaryInv[order(nodBinaryInv$original_host, nodBinaryInv$original_status),]
 
 #sort out plant status and strain origin
 nameFunction <- function(data) {
@@ -84,26 +93,26 @@ nameFunction <- function(data) {
 }
 
 plantNames <- (
-  nodBinary%>%
+  nodBinaryInv%>%
     group_by(plant)%>%
     summarize(status={stopifnot(length(unique(plant_status))==1); plant_status[1]})%>%
     nameFunction()
 )
 
 bacteriaNames <- (
-  nodBinary%>%
+  nodBinaryInv%>%
     group_by(strain_label)%>%
     summarize(status={stopifnot(length(unique(original_status))==1); original_status[1]})%>%
     nameFunction()
 )
 
 #generate heatmap
-heatmapNodulation <- nodBinary%>%
+heatmapNodulation <- nodBinaryInv%>%
   select(plant, strain_label, nod_binary, original_status, original_host)%>%
   spread(plant, nod_binary)
 heatmapNodulation <- heatmapNodulation[order(heatmapNodulation$original_status, heatmapNodulation$original_host),]%>%
-  select(strain_label, ACGL, ACWR, GEMO, LUAR, SPJU, ULEU)
-heatmapNodulation <- heatmapNodulation[c('strain_label', 'ACGL', 'ACWR', 'LUAR', 'GEMO', 'SPJU', 'ULEU')]
+  select(strain_label, GEMO, SPJU, ULEU)
+heatmapNodulation <- heatmapNodulation[c('strain_label', 'GEMO', 'SPJU', 'ULEU')]
 
 heatmapNodulation[is.na(heatmapNodulation)] <- -1
 
@@ -121,7 +130,6 @@ binaryColors <- c('white', 'grey', 'black')
 binaryBreaks <- c(-2,-0.5,0.5,2)
 heatmap(binaryHeatmapMatrix, Rowv=NA, Colv=NA, margins=c(5,18), breaks=binaryBreaks, col=binaryColors, scale='none',
         RowSideColors=ifelse(bacteriaNames[rownames(heatmapMatrix)]=='native', '#009900', '#FF9900'),
-        ColSideColors=ifelse(plantNames[colnames(heatmapMatrix)]=='native', '#009900', '#FF9900'),
         distfun=function(x) reverseNAdist(x, method='binary'))
 legend('topright',
        legend=c('N/A', 'No', 'Yes'),
@@ -130,7 +138,7 @@ legend('topright',
        bty='n')
 legend('right',
       legend=c('Native', 'Invasive'),
-      title='Plant Status and\nRhizobia Origin',
+      title='Rhizobia Origin',
       fill=c('#009900', '#FF9900'),
       bty='n')
 #export at 1200x800 and edit strain labels and rearrange components to make more clear
